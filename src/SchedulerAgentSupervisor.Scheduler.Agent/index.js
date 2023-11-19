@@ -25,6 +25,7 @@ async function main() {
 
     // 2. Process the message here
     const responseQueueClient = queueServiceClient.getQueueClient(responseQueueName);
+    await responseQueueClient.sendMessage(`Send Message: ${message.messageText}`)
 
     // 3. Delete the message from the queue
     await requestQueueClient.deleteMessage(message.messageId, message.popReceipt);
