@@ -38,6 +38,7 @@ $CONTAINER_IMAGE_NAME="agent"
 
 # Create Agent Job
 $JOB_NAME="thirayama-test-acajob-sas-agent"
+$CONTAINER_IMAGE_NAME="agent"
 az containerapp job create `
     --name "${JOB_NAME}" `
     --resource-group "${RESOURCE_GROUP}" `
@@ -60,3 +61,29 @@ az containerapp job create `
     --secrets "connection-string-secret=${QUEUE_CONNECTION_STRING}" `
     --registry-server "${CONTAINER_REGISTRY_NAME}.azurecr.io" `
     --env-vars "AZURE_STORAGE_REQUEST_QUEUE_NAME=${REQUEST_QUEUE_NAME}" "AZURE_STORAGE_RESPONSE_QUEUE_NAME=${RESPONSE_QUEUE_NAME}" "AZURE_STORAGE_CONNECTION_STRING=secretref:connection-string-secret"
+
+# Create Receiver Job
+$JOB_NAME="thirayama-test-acajob-receiver"
+$CONTAINER_IMAGE_NAME="receiver"
+az containerapp job create `
+    --name "${JOB_NAME}" `
+    --resource-group "${RESOURCE_GROUP}" `
+    --environment "${ACA_ENVIRONMENT}" `
+    --trigger-type "Event" `
+    --replica-timeout "1800" `
+    --replica-retry-limit "1" `
+    --replica-completion-count "1" `
+    --parallelism "1" `
+    --min-executions "0" `
+    --max-executions "1" `
+    --polling-interval "60" `
+    --scale-rule-name "queue" `
+    --scale-rule-type "azure-queue" `
+    --scale-rule-metadata "accountName=${STORAGE_ACCOUNT_NAME}" "queueName=${RESPONSE_QUEUE_NAME}" "queueLength=1" `
+    --scale-rule-auth "connection=connection-string-secret" `
+    --image "${CONTAINER_REGISTRY_NAME}.azurecr.io/${CONTAINER_IMAGE_NAME}" `
+    --cpu "0.25" `
+    --memory "0.5Gi" `
+    --secrets "connection-string-secret=${QUEUE_CONNECTION_STRING}" `
+    --registry-server "${CONTAINER_REGISTRY_NAME}.azurecr.io" `
+    --env-vars "AZURE_STORAGE_QUEUE_NAME=${RESPONSE_QUEUE_NAME}" "AZURE_STORAGE_CONNECTION_STRING=secretref:connection-string-secret"
