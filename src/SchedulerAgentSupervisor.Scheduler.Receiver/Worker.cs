@@ -15,6 +15,7 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Active Receiver");
         string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING") ?? throw new Exception();
         string queueName = Environment.GetEnvironmentVariable("AZURE_STORAGE_QUEUE_NAME") ?? throw new Exception();
         var queueClient = new QueueClient(connectionString, queueName);
@@ -37,5 +38,6 @@ public class Worker : BackgroundService
                 await Task.Delay(10000, stoppingToken);
             }
         }
+        _logger.LogInformation("Close Receiver");
     }
 }

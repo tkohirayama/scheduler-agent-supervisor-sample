@@ -1,5 +1,4 @@
 using SchedulerAgentSupervisor.Scheduler.Receiver;
-using Azure.Storage.Queues;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
