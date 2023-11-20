@@ -7,15 +7,29 @@ using Azure.Storage.Queues.Models;
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
+    private readonly IHostApplicationLifetime _appLifetime;
 
-    public Worker(ILogger<Worker> logger)
+    public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime)
     {
         _logger = logger;
+        _appLifetime = appLifetime;
+
+        _appLifetime.ApplicationStarted.Register(OnStarted);
+        _appLifetime.ApplicationStopped.Register(OnStopped);
+    }
+
+    void OnStarted()
+    {
+        _logger.LogInformation("Active Receiver");
+    }
+
+    void OnStopped()
+    {
+        _logger.LogInformation("Close Receiver");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Active Receiver");
         string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING") ?? throw new Exception();
         string queueName = Environment.GetEnvironmentVariable("AZURE_STORAGE_QUEUE_NAME") ?? throw new Exception();
         var queueClient = new QueueClient(connectionString, queueName);
@@ -38,6 +52,6 @@ public class Worker : BackgroundService
                 await Task.Delay(10000, stoppingToken);
             }
         }
-        _logger.LogInformation("Close Receiver");
+        _appLifetime.StopApplication();
     }
 }
