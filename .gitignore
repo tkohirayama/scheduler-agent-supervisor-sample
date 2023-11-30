@@ -200,3 +200,7 @@ dist
 
 bin
 obj
+
+# Azurite
+__azurite*
+__queuestorage*
