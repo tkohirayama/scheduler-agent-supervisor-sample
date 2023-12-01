@@ -1,0 +1,11 @@
+﻿global using System.Data;
+global using MediatR;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Design;
+global using Microsoft.EntityFrameworkCore.Metadata.Builders;
+global using Microsoft.EntityFrameworkCore.Storage;
+global using Ordering.Job.Domain.AggregatesModel.OrderingJobAggregates;
+global using Ordering.Job.Domain.SeedWork;
+global using Ordering.Job.Domain.Exceptions;
+global using Ordering.Job.Infrastructure.EntityConfigurations;
+global using Ordering.Job.Infrastructure.Idempotency;
