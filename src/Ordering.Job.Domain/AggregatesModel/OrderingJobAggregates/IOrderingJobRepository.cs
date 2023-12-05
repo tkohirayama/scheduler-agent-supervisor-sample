@@ -1,9 +1,9 @@
 namespace Ordering.Job.Domain.AggregatesModel.OrderingJobAggregates;
 
-public interface IOrderingJobRepository
+public interface IOrderingJobStateRepository : IRepository<OrderingJobState>
 {
-    Task<OrderingJobState> GetAsync(string orderId);
-    Task<List<OrderingJobState>> GetByStateAsync(ProcessState processState);
+    Task<OrderingJobState> FindAsync(int orderId);
+    Task<List<OrderingJobState>> FindByStateAsync(ProcessState processState);
     Task<List<OrderingJobState>> GetByLockedByAsync(string lockedBy);
-    Task Update(OrderingJobState orderingJobState);
+    OrderingJobState Update(OrderingJobState orderingJobState);
 }

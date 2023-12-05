@@ -4,7 +4,7 @@ namespace Ordering.Job.Infrastructure;
 
 public class OrderingJobContext : DbContext, IUnitOfWork
 {
-    public DbSet<OrderingJobState> Orders { get; set; }
+    public DbSet<OrderingJobState> OrderingJobStates { get; set; }
 
     private readonly IMediator _mediator;
     private IDbContextTransaction _currentTransaction;

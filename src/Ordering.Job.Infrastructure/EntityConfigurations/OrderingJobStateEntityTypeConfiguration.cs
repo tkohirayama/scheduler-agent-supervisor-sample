@@ -10,15 +10,12 @@ class OrderingJobStateEntityTypeConfiguration : IEntityTypeConfiguration<Orderin
 
         orderConfiguration
             .Property(o => o.Id)
-            .HasColumnName("order_id");
+            .HasColumnName("order_id")
+            .ValueGeneratedNever();
 
         orderConfiguration
             .Property(o => o.LockedBy)
             .HasColumnName("locked_by");
-
-        orderConfiguration
-            .Property(o => o.LockedBy)
-            .HasColumnName("OrderStatusId");
 
         orderConfiguration
             .Property(o => o.CompleteBy)
@@ -26,7 +23,11 @@ class OrderingJobStateEntityTypeConfiguration : IEntityTypeConfiguration<Orderin
 
         orderConfiguration
             .Property(o => o.ProcessState)
-            .HasColumnName("process_state");
+            .HasColumnName("process_state")
+            .HasConversion(
+                v => v.Id,
+                v => Enumeration.FromValue<ProcessState>(v)
+            );
 
         orderConfiguration
             .Property(o => o.FailureCount)
