@@ -1,6 +1,6 @@
 ﻿{
   "profiles": {
-    "SchedulerAgentSupervisor.Scheduler.Receiver": {
+    "Ordering.Job.Scheduler.Complete": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "environmentVariables": {
