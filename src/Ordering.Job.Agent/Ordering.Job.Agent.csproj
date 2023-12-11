@@ -11,4 +11,8 @@
     <PackageReference Include="Azure.Storage.Queues" Version="12.17.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ordering.Job.Domain\Ordering.Job.Domain.csproj" />
+  </ItemGroup>
 </Project>

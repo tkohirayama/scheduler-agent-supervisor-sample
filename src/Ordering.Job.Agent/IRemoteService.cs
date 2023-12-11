@@ -1,10 +1,11 @@
 using System.Diagnostics;
+using Ordering.Job.Domain.Messages;
 
 namespace Ordering.Job.Agent
 {
     public interface IRemoteService
     {
-        Task PostOrderingInfoAsync(string data);
+        Task<bool> PostOrderingInfoAsync(RequestModel request);
     }
 
     public class RemoteServiceMock : IRemoteService
@@ -12,20 +13,24 @@ namespace Ordering.Job.Agent
         private readonly double _availabilityRate;
         public RemoteServiceMock(IConfiguration configuration)
         {
-            _availabilityRate = configuration.GetValue("RemoteServiceMock:AvailabilityRate", 100);
+            // _availabilityRate = configuration.GetValue("RemoteServiceMock:AvailabilityRate", 100);
         }
 
-        public async Task PostOrderingInfoAsync(string data)
+        public async Task<bool> PostOrderingInfoAsync(RequestModel request)
         {
-            await Task.Delay(1000).ConfigureAwait(false);
-
-            Random r = new();
-            int rInt = r.Next(0, 100);
-            if((int)(rInt / _availabilityRate) > 0)
+            await Task.Run(() =>
             {
-                // まれに失敗
-                throw new Exception();
-            }
+                if (request.OrderId % 3 == 0)
+                {
+                    // 3の倍数の注文IDはエラーとする
+                    throw new RemoteServiceException();
+                }
+            }).ConfigureAwait(false);
+            return true;
         }
+    }
+
+    public class RemoteServiceException : Exception
+    {
     }
 }

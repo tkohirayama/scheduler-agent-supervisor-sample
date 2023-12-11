@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Ordering.Job.Domain.Messages;
 
 namespace Ordering.Job.Agent;
 
@@ -7,7 +9,7 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IHostApplicationLifetime _appLifetime;
-    private readonly QueueClient _requestQueueName;
+    private readonly QueueClient _requestQueue;
     private readonly QueueClient _responseQueueName;
     private readonly IRemoteService _remoteService;
     public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime, IConfiguration configuration)
@@ -20,7 +22,7 @@ public class Worker : BackgroundService
         string connectionString = configuration.GetValue<string>("AZURE_STORAGE_CONNECTION_STRING") ?? throw new Exception();
         string requestQueueName = configuration.GetValue<string>("AZURE_STORAGE_REQUEST_QUEUE_NAME") ?? throw new Exception();
         string responseQueueName = configuration.GetValue<string>("AZURE_STORAGE_RESPONSE_QUEUE_NAME") ?? throw new Exception();
-        _requestQueueName = new QueueClient(connectionString, requestQueueName);
+        _requestQueue = new QueueClient(connectionString, requestQueueName);
         _responseQueueName = new QueueClient(connectionString, responseQueueName);
         _remoteService = new RemoteServiceMock(configuration);
     }
@@ -37,35 +39,52 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        if (await _requestQueue.ExistsAsync(stoppingToken).ConfigureAwait(false))
         {
-            if (await _requestQueueName.ExistsAsync(stoppingToken).ConfigureAwait(false))
+            try
             {
-                try
+                QueueProperties properties = await _requestQueue.GetPropertiesAsync(stoppingToken).ConfigureAwait(false);
+                if (properties.ApproximateMessagesCount > 0)
                 {
-                    QueueProperties properties = await _requestQueueName.GetPropertiesAsync(stoppingToken).ConfigureAwait(false);
-                    if (properties.ApproximateMessagesCount > 0)
+                    QueueMessage[] retrievedMessage = await _requestQueue.ReceiveMessagesAsync(10, cancellationToken: stoppingToken);
+                    foreach (var message in retrievedMessage)
                     {
-                        QueueMessage[] retrievedMessage = await _requestQueueName.ReceiveMessagesAsync(1, cancellationToken: stoppingToken);
-                        string orderingInfo = retrievedMessage[0].Body.ToString();
-                        _logger.LogInformation("Received Ordering Info: {orderingInfo}", orderingInfo);
+                        RequestModel request = JsonSerializer.Deserialize<RequestModel>(message.Body);
+                        _logger.LogInformation("Received Ordering Info: {OrderId}", request.OrderId);
 
-                        await _remoteService.PostOrderingInfoAsync(orderingInfo);
-                        await _responseQueueName.SendMessageAsync($"RemoteService was Successful. {retrievedMessage[0].MessageId}"); 
+                        bool isSuccessRemoteService = false;
+                        try
+                        {
+                            isSuccessRemoteService = await _remoteService.PostOrderingInfoAsync(request);
+                        }
+                        catch (RemoteServiceException rex)
+                        {
+                            _logger.LogError(rex, "Error Remote Service: {OrderId}", request.OrderId);
+                        }
 
-                        // Delete Message
-                        await _requestQueueName.DeleteMessageAsync(retrievedMessage[0].MessageId, retrievedMessage[0].PopReceipt, stoppingToken);
+                        if (isSuccessRemoteService)
+                        {
+                            // Send Response Message
+                            var responseModel = new ResponseModel
+                            {
+                                OrderId = request.OrderId
+                            };
+                            await _responseQueueName.SendMessageAsync(JsonSerializer.Serialize(responseModel));
+                        }
+
+                        // Delete Request Message
+                        await _requestQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
                     }
-                    await Task.Delay(1000, stoppingToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Error Ordering.Job.Agent");
                 }
             }
-
-            _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            await Task.Delay(1000, stoppingToken);
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error Ordering.Job.Agent");
+            }
+            finally
+            {
+                _appLifetime.StopApplication();
+            }
         }
     }
 }
