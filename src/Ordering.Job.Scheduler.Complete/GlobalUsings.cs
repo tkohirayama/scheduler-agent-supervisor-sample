@@ -1,5 +1,4 @@
 ﻿global using Azure.Storage.Queues;
-global using FluentValidation;
 global using Microsoft.EntityFrameworkCore;
 global using Ordering.Job.Domain.AggregatesModel.OrderingJobAggregates;
 global using Ordering.Job.Domain.Exceptions;

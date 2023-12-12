@@ -18,31 +18,31 @@ public class Worker : BackgroundService
 
     void OnStarted()
     {
-        _logger.LogInformation("Started Ordering.Job.Scheduler.Start");
+        _logger.LogInformation("Started Ordering.Job.Scheduler.Complete");
     }
 
     void OnStopped()
     {
-        _logger.LogInformation("Stopped Ordering.Job.Scheduler.Start");
+        _logger.LogInformation("Stopped Ordering.Job.Scheduler.Complete");
     }
 
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                using var scope = _serviceProvider.CreateScope();
-                var workflow = scope.ServiceProvider.GetRequiredService<IComplete>();
-                await workflow.Execute(stoppingToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error Ordering.Job.Scheduler.Complete");
-                throw;
-            }
-            await Task.Delay(1000).ConfigureAwait(false);
+            using var scope = _serviceProvider.CreateScope();
+            var workflow = scope.ServiceProvider.GetRequiredService<IComplete>();
+            await workflow.Execute(stoppingToken).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error Ordering.Job.Scheduler.Complete");
+            throw;
+        }
+        finally
+        {
+            _appLifetime.StopApplication();
         }
     }
 }

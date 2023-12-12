@@ -28,11 +28,11 @@ public class Complete : IComplete
                 QueueProperties properties = await _responseQueue.GetPropertiesAsync(cancellationToken).ConfigureAwait(false);
                 if (properties.ApproximateMessagesCount > 0)
                 {
-                    QueueMessage[] retrievedMessage = await _responseQueue.ReceiveMessagesAsync(1, cancellationToken: cancellationToken);
+                    QueueMessage[] retrievedMessage = await _responseQueue.ReceiveMessagesAsync(10, cancellationToken: cancellationToken);
                     var completeModel = JsonSerializer.Deserialize<ResponseModel>(retrievedMessage[0].Body);
 
                     await using var transaction = await _dbContext.BeginTransactionAsync();
-                    var state = await _orderingJobStateRepository.FindAsync(completeModel.OrderId).ConfigureAwait(false);
+                    var state = await _orderingJobStateRepository.FindAsync(completeModel!.OrderId).ConfigureAwait(false);
 
                     // DB Update
                     state.ProcessState = ProcessState.Processed;
@@ -45,7 +45,7 @@ public class Complete : IComplete
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
             throw;
         }
