@@ -1,9 +1,10 @@
 using Ordering.Job.Agent;
 
 IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
+    .ConfigureServices((hostContext, services) =>
     {
         services.AddHostedService<Worker>();
+        services.AddScoped<IRemoteService, RemoteServiceMock>();
     })
     .Build();
 

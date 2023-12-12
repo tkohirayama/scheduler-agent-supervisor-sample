@@ -10,9 +10,11 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly IHostApplicationLifetime _appLifetime;
     private readonly QueueClient _requestQueue;
-    private readonly QueueClient _responseQueueName;
+    private readonly QueueClient _responseQueue;
     private readonly IRemoteService _remoteService;
-    public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime, IConfiguration configuration)
+    public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime,
+        IConfiguration configuration,
+        IRemoteService remoteService)
     {
         _logger = logger;
         _appLifetime = appLifetime;
@@ -23,8 +25,8 @@ public class Worker : BackgroundService
         string requestQueueName = configuration.GetValue<string>("AZURE_STORAGE_REQUEST_QUEUE_NAME") ?? throw new Exception();
         string responseQueueName = configuration.GetValue<string>("AZURE_STORAGE_RESPONSE_QUEUE_NAME") ?? throw new Exception();
         _requestQueue = new QueueClient(connectionString, requestQueueName);
-        _responseQueueName = new QueueClient(connectionString, responseQueueName);
-        _remoteService = new RemoteServiceMock(configuration);
+        _responseQueue = new QueueClient(connectionString, responseQueueName);
+        _remoteService = remoteService;
     }
 
     void OnStarted()
@@ -49,30 +51,19 @@ public class Worker : BackgroundService
                     QueueMessage[] retrievedMessage = await _requestQueue.ReceiveMessagesAsync(10, cancellationToken: stoppingToken);
                     foreach (var message in retrievedMessage)
                     {
-                        RequestModel request = JsonSerializer.Deserialize<RequestModel>(message.Body);
-                        _logger.LogInformation("Received Ordering Info: {OrderId}", request.OrderId);
+                        var request = JsonSerializer.Deserialize<RequestModel>(message.Body);
+                        _logger.LogInformation("Received Ordering Info: {OrderId}", request!.OrderId);
 
-                        bool isSuccessRemoteService = false;
                         try
                         {
-                            isSuccessRemoteService = await _remoteService.PostOrderingInfoAsync(request);
+                            await _remoteService.PostOrderingInfoAsync(request);
+                            await _responseQueue.SendMessageAsync(JsonSerializer.Serialize(new ResponseModel { OrderId = request.OrderId }));
                         }
                         catch (RemoteServiceException rex)
                         {
                             _logger.LogError(rex, "Error Remote Service: {OrderId}", request.OrderId);
                         }
 
-                        if (isSuccessRemoteService)
-                        {
-                            // Send Response Message
-                            var responseModel = new ResponseModel
-                            {
-                                OrderId = request.OrderId
-                            };
-                            await _responseQueueName.SendMessageAsync(JsonSerializer.Serialize(responseModel));
-                        }
-
-                        // Delete Request Message
                         await _requestQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
                     }
                 }

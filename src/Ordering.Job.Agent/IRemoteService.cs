@@ -1,21 +1,15 @@
-using System.Diagnostics;
 using Ordering.Job.Domain.Messages;
 
 namespace Ordering.Job.Agent
 {
-    public interface IRemoteService
-    {
-        Task<bool> PostOrderingInfoAsync(RequestModel request);
-    }
-
     public class RemoteServiceMock : IRemoteService
     {
-        private readonly double _availabilityRate;
-        public RemoteServiceMock(IConfiguration configuration)
-        {
-            // _availabilityRate = configuration.GetValue("RemoteServiceMock:AvailabilityRate", 100);
-        }
+        ILogger<RemoteServiceMock> _logger;
 
+        public RemoteServiceMock(ILogger<RemoteServiceMock> logger)
+        {
+            _logger = logger;
+        }
         public async Task<bool> PostOrderingInfoAsync(RequestModel request)
         {
             await Task.Run(() =>
@@ -25,10 +19,19 @@ namespace Ordering.Job.Agent
                     // 3の倍数の注文IDはエラーとする
                     throw new RemoteServiceException();
                 }
+                else
+                {
+                    _logger.LogInformation("注文ID:{OrderId}", request.OrderId);
+                }
             }).ConfigureAwait(false);
             return true;
         }
     }
+    public interface IRemoteService
+    {
+        Task<bool> PostOrderingInfoAsync(RequestModel request);
+    }
+
 
     public class RemoteServiceException : Exception
     {
