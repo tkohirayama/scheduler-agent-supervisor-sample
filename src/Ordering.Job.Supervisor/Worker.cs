@@ -1,11 +1,11 @@
 namespace Ordering.Job.Supervisor;
 
-public class Worker : BackgroundService
+public class Worker : IHostedService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IHostApplicationLifetime _appLifetime;
     private readonly IServiceProvider _serviceProvider;
-    public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime, IMediator mediator,
+    public Worker(ILogger<Worker> logger, IHostApplicationLifetime appLifetime,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
@@ -26,22 +26,20 @@ public class Worker : BackgroundService
         _logger.LogInformation("Stopped Ordering.Job.Supervisor");
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task StartAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                using var scope = _serviceProvider.CreateScope();
-                var supervisor = scope.ServiceProvider.GetRequiredService<ISupervisor>();
-                await supervisor.Execute(stoppingToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error Ordering.Job.Supervisor");
-                throw;
-            }
-            await Task.Delay(1000, stoppingToken);
+            using var scope = _serviceProvider.CreateScope();
+            var workflow = scope.ServiceProvider.GetRequiredService<ISupervisor>();
+            await workflow.Execute(stoppingToken).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error Ordering.Job.Supervisor");
+            throw;
         }
     }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

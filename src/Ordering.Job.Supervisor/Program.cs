@@ -7,21 +7,10 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddDbContext<OrderingJobContext>(
             x => x.UseSqlServer(dbConnectionString));
 
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssemblyContaining(typeof(Program));
-
-            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(ValidatorBehavior<,>));
-            cfg.AddOpenBehavior(typeof(TransactionBehavior<,>));
-        });
-
-        services.AddSingleton<IValidator<SupervisorCommand>, SupervisorCommandValidator>();
-
         services.AddScoped<IOrderingJobStateRepository, OrderingJobStateRepository>();
 
         services.AddScoped<ISupervisor, Supervisor>();
     })
     .Build();
 
-await host.RunAsync();
+await host.StartAsync().ConfigureAwait(false);
