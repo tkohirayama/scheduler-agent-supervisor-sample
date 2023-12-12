@@ -14,7 +14,7 @@ public class OrderingJobStateRepository : IOrderingJobStateRepository
     {
         return await _context.OrderingJobStates
             .Where(o => o.Id == orderId)
-            .SingleOrDefaultAsync()
+            .FirstOrDefaultAsync()
             .ConfigureAwait(false);
     }
 
