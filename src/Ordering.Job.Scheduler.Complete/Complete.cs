@@ -29,19 +29,22 @@ public class Complete : IComplete
                 if (properties.ApproximateMessagesCount > 0)
                 {
                     QueueMessage[] retrievedMessage = await _responseQueue.ReceiveMessagesAsync(10, cancellationToken: cancellationToken);
-                    var completeModel = JsonSerializer.Deserialize<ResponseModel>(retrievedMessage[0].Body);
+                    foreach (var message in retrievedMessage)
+                    {
+                        var responseModel = JsonSerializer.Deserialize<ResponseModel>(message.Body);
 
-                    await using var transaction = await _dbContext.BeginTransactionAsync();
-                    var state = await _orderingJobStateRepository.FindAsync(completeModel!.OrderId).ConfigureAwait(false);
+                        await using var transaction = await _dbContext.BeginTransactionAsync();
+                        var state = await _orderingJobStateRepository.FindAsync(responseModel!.OrderId).ConfigureAwait(false);
 
-                    // DB Update
-                    state.ProcessState = ProcessState.Processed;
-                    _orderingJobStateRepository.Update(state);
+                        // DB Update
+                        state.ProcessState = ProcessState.Processed;
+                        _orderingJobStateRepository.Update(state);
 
-                    await _dbContext.CommitTransactionAsync(transaction);
+                        await _dbContext.CommitTransactionAsync(transaction);
 
-                    // Delete Message
-                    await _responseQueue.DeleteMessageAsync(retrievedMessage[0].MessageId, retrievedMessage[0].PopReceipt, cancellationToken);
+                        // Delete Message
+                        await _responseQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+                    }
                 }
             }
         }

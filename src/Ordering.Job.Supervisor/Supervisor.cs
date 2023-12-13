@@ -23,19 +23,24 @@ public class Supervisor : ISupervisor
             var processingJobs = await _orderingJobRepository.FindByStateAsync(ProcessState.Processing).ConfigureAwait(false);
             foreach (var job in processingJobs)
             {
-                if (job.FailureCount >= _retryLimit)
+                if (job.CompleteBy < DateTimeOffset.Now)
                 {
-                    // リトライ回数が既定値（3回）となった場合はステータスをFailedにする
-                    job.ProcessState = ProcessState.Error;
-                    _orderingJobRepository.Update(job);
-                }
-                else if (job.CompleteBy < DateTimeOffset.Now)
-                {
-                    // 処理の期限を過ぎた場合は失敗カウントを増やしてステータスをPendingにする
-                    job.ProcessState = ProcessState.Pending;
-                    job.FailureCount++;
-                    job.CompleteBy = null;
-                    _orderingJobRepository.Update(job);
+                    if (job.FailureCount >= _retryLimit)
+                    {
+                        // リトライ回数が既定値（3回）となった場合はステータスをFailedにする
+                        job.ProcessState = ProcessState.Error;
+                        job.FailureCount++;
+                        _orderingJobRepository.Update(job);
+                    }
+                    else
+                    {
+                        // 処理の期限を過ぎた場合は失敗カウントを増やしてステータスをPendingにする
+                        job.ProcessState = ProcessState.Pending;
+                        job.FailureCount++;
+                        job.LockedBy = null;
+                        job.CompleteBy = null;
+                        _orderingJobRepository.Update(job);
+                    }
                 }
             }
             await _dbContext.CommitTransactionAsync(transaction);
